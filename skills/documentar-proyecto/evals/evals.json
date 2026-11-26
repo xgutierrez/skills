@@ -1,0 +1,50 @@
+[
+  {
+    "skills": ["documentar-proyecto"],
+    "query": "Documenta el proyecto pronaca_analitica_plataforma. El README solo tiene la plantilla por defecto de Azure DevOps.",
+    "files": [],
+    "expected_behavior": [
+      "Ejecuta scripts/inventario.py antes de escribir y lee los notebooks de configuración y de tablas gold",
+      "Crea README.md, docs/01_entendimiento.md, docs/02_arquitectura.md, docs/03_fuentes_y_datos.md, docs/04_operacion.md, AGENTS.md y CLAUDE.md, en español",
+      "Incluye al menos un diagrama de contexto, uno de flujo de datos, uno por job programado y uno de linaje, todos con `graph` (no `flowchart`), sin HTML, con título y línea 'Cómo leerlo'",
+      "Los horarios, tablas y dependencias escritos coinciden con databricks.yml y resources/*.yml",
+      "Marca como 'Por confirmar' el responsable y los usuarios, sin inventarlos, y no copia correos ni valores de secretos",
+      "scripts/validar_docs.py termina sin errores"
+    ]
+  },
+  {
+    "skills": ["documentar-proyecto"],
+    "query": "Redocumenta pronaca_modelo_pnl con la estructura estándar. Ya tiene README y una carpeta docs/ escrita a mano con guías de Power BI, archivos DAX y un manual de usuario.",
+    "files": [],
+    "expected_behavior": [
+      "Lee toda la documentación previa antes de escribir y migra su contenido vigente a los documentos nuevos",
+      "Conserva los manuales de usuario, las guías de Power BI y los archivos .dax, y los enlaza como documentos complementarios",
+      "No renombra ni elimina un documento citado desde los notebooks; avisa del choque de numeración",
+      "No modifica notebooks, YAML ni ningún archivo fuera de README.md, docs/, AGENTS.md y CLAUDE.md",
+      "Informa de las contradicciones entre la documentación previa y el código",
+      "No hace commit ni push"
+    ]
+  },
+  {
+    "skills": ["documentar-proyecto"],
+    "query": "Quiero empezar a trabajar con un agente de IA sobre el repositorio pronaca_ave_en_pie. Déjalo preparado para que entienda el proyecto.",
+    "files": [],
+    "expected_behavior": [
+      "Genera AGENTS.md en la raíz con menos de 200 líneas y un CLAUDE.md que solo contiene @AGENTS.md",
+      "AGENTS.md incluye comandos reales del bundle, reglas que no se pueden romper, cómo comprobar un cambio, qué requiere confirmación humana y trampas conocidas",
+      "Las rutas y comandos citados existen en el repositorio",
+      "No regenera el resto de la documentación si no se pidió, pero enlaza a la que exista"
+    ]
+  },
+  {
+    "skills": ["documentar-proyecto"],
+    "query": "Hazme solo el diagrama de arquitectura del repositorio BigData, que tiene una factoría de Data Factory con cientos de pipelines.",
+    "files": [],
+    "expected_behavior": [
+      "Entrega solo los diagramas pedidos, sin reescribir README ni docs/",
+      "Agrupa los pipelines por carpeta o dominio y parte de los orquestadores maestros, en lugar de dibujar un nodo por pipeline",
+      "Ningún diagrama supera unos 15 nodos",
+      "Presenta como observación, no como hecho, los pipelines que parezcan en desuso"
+    ]
+  }
+]
