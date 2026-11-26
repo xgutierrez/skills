@@ -51,6 +51,55 @@ Si `subir` es rechazado, es que el equipo subió algo: ejecuta `traer` y luego
 El repositorio de la empresa solo recibe `empresas/<empresa>/`: nada de `personal/`
 llega allí.
 
+## Si `instalar.sh` dice OMITIDO
+
+`OMITIDO` significa que en `~/.claude/skills` o `~/.agents/skills` ya hay una carpeta
+con ese nombre que **no es un enlace a este repositorio** (por ejemplo, una copia que
+quedó de los repositorios anteriores). El script no la toca por seguridad.
+
+```bash
+./instalar.sh --reemplazar
+```
+
+Mueve lo viejo a un respaldo (`~/.respaldo-skills/<fecha-hora>/`, el mensaje dice la
+ruta exacta) y deja en su lugar el enlace a la última versión. No borra nada. Sirve
+igual para Claude Code, Cursor y Grok, porque todos leen esas dos carpetas. Abre una
+sesión nueva después: las skills se leen al iniciar.
+
+Con la skill ya enlazada, `git pull` basta para tener siempre la última versión.
+
+## Cómo funciona todo (para retomar el tema)
+
+```
+GitHub xgutierrez/skills  (privado, un solo repo)
+├── personal/            ──> ~/.agents/skills ──> Cursor, Grok, Codex
+│                        └─> .zip (crear-zips.sh) ──> app de Claude / ChatGPT web
+└── empresas/pronaca/    ──> ~/.claude/skills ──> Claude Code, Cursor, Grok
+        │
+        └── sincronizar-empresa.sh subir/traer (git subtree)
+                    │
+                    ▼
+GitHub xgutierrez/skills-pronaca  (solo lo de Pronaca)
+        └──> PC de Pronaca (Windows): clon en %USERPROFILE%\.cursor\skills\
+```
+
+Decisiones tomadas y por qué:
+
+| Decisión | Motivo |
+|---|---|
+| Un solo repo en mi Mac con `personal/` y `empresas/` | Un único lugar que administrar |
+| Repo aparte `skills-pronaca` con solo lo de Pronaca | El equipo recibe el estándar sin mis cosas personales; sirve de respaldo si salgo de la empresa |
+| `git subtree` para publicar la carpeta de Pronaca | Un solo clon, sin copiar archivos a mano |
+| Cada skill se enlaza en una sola carpeta | Cursor y Grok leen varias carpetas; así no salen repetidas |
+| Windows sin enlaces: se clona dentro de `.cursor\skills` | Los enlaces simbólicos en Windows exigen permisos |
+| Zips solo de `personal/`, descripción de 200 caracteres como máximo | La app de Claude lo exige; lo de Pronaca no se sube a cuentas personales |
+| Eliminé la skill `correos-base` y la sincronización de copias | Era demasiado complejo; lo personal vive en un solo sitio |
+
+Estado al 26-nov-2026: ambos repos publicados en GitHub; 12 skills de Pronaca; 2
+personales (`mi-estilo-correos`, `guardar-en-skill`). Pendiente: confirmar con
+Pronaca si el repo del equipo puede vivir en su Azure DevOps (basta cambiar la URL del
+remoto `empresa-pronaca`).
+
 ## Subir las skills personales a la app de Claude y a ChatGPT
 
 ```bash
