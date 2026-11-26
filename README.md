@@ -75,6 +75,19 @@ Para dejar además la CLI de Databricks, Azure y Azure DevOps listas:
 ~/skills-pronaca/configurar-equipo.sh                  # arregla lo que falte
 ```
 
+### Si dice OMITIDO
+
+Ya hay en `~/.claude/skills` una carpeta con ese nombre que no es un enlace a este
+repositorio (una copia vieja). Para dejar la última versión:
+
+```bash
+./instalar.sh --reemplazar
+```
+
+Mueve lo viejo a un respaldo (el mensaje dice dónde) y crea el enlace. No borra nada.
+En Windows: borra o renombra la carpeta vieja en `%USERPROFILE%\.cursor\skills\` y
+clona de nuevo.
+
 ## Mantener al día
 
 | Equipo | Para actualizar |
@@ -103,6 +116,13 @@ python3 skills/estandares-datos/scripts/revisar_estandar.py <ruta_repo> --resume
 Cada regla indica su origen en
 [`fuentes.md`](skills/estandares-datos/references/fuentes.md): documentación oficial
 de Databricks, los PEP de Python (8, 257 y 484) o una decisión propia.
+
+## Cómo llega aquí
+
+Este repositorio es la carpeta `empresas/pronaca/` del repositorio personal de su
+autor, publicada con `git subtree`. Quien lo mantiene edita allí y publica con
+`sincronizar-empresa.sh pronaca subir`; lo que mejore el equipo aquí se trae de vuelta
+con `traer`. Por eso no se reescribe el historial ni se fuerzan pushes.
 
 ## Estructura
 
