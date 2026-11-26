@@ -39,7 +39,7 @@ fi
 
 case "$ACCION" in
   subir)
-    echo "Publicando $CARPETA en $REMOTO/$RAMA…"
+    echo "Publicando $CARPETA en $REMOTO/${RAMA}…"
     if ! git subtree push --prefix="$CARPETA" --rejoin "$REMOTO" "$RAMA"; then
       echo
       echo "El push fue rechazado: probablemente el equipo subió cambios."
@@ -48,7 +48,7 @@ case "$ACCION" in
     fi
     ;;
   traer)
-    echo "Trayendo $REMOTO/$RAMA a $CARPETA…"
+    echo "Trayendo $REMOTO/$RAMA a ${CARPETA}…"
     git subtree pull --prefix="$CARPETA" "$REMOTO" "$RAMA" \
       -m "Trae los cambios del repositorio de $EMPRESA"
     ;;
