@@ -1,0 +1,9 @@
+.DS_Store
+__pycache__/
+*.pyc
+*-workspace/
+.venv/
+dist/
+
+# Cifras de negocio: nunca se suben.
+*.local.md
