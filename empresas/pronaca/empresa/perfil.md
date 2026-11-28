@@ -66,11 +66,41 @@ Las escrituras `bigdata` y `big_data` para `proyecto` son antiguas: no se usan e
 jobs nuevos. Si no hay certeza del valor de `modelo`, se pregunta si es transversal
 o de un modelo concreto.
 
+## Dueño de las tablas
+
+| Dato | Valor |
+|---|---|
+| Grupo dueño de toda tabla, vista y esquema nuevos | `gr_usr_area_datos_de_int` |
+
+El *service principal* que ejecuta los jobs tiene que pertenecer a este grupo; si
+no, el `ALTER` del setup falla después de ceder la propiedad.
+
 ## Etiquetas de tablas
 
 | Etiqueta | Valores admitidos | Dónde |
 |---|---|---|
 | `capa` | `consumo`, `interno` | Tablas gold |
+| `dato_personal` | `si` | Tabla con al menos una columna clasificada |
+| `dato_personal` | Ver la tabla siguiente | Cada columna con datos personales |
+
+## Clasificación de datos personales
+
+Nomenclatura tomada de la Ley Orgánica de Protección de Datos Personales del Ecuador
+(LOPDP), artículos 4 y 25. Para Panamá (Toledano) se usa la misma hasta revisar la
+Ley 81 de 2019. Las fuentes están en `estandares-datos/references/fuentes.md`, §8.
+
+| Valor de `dato_personal` | Qué es, según la LOPDP | Ejemplos |
+|---|---|---|
+| `identificativo` | Identifica o hace identificable a una persona natural (Art. 4) | Nombre, cédula, RUC de persona natural, correo, teléfono, dirección, coordenadas de un domicilio, nombre del encuestador |
+| `crediticio` | Comportamiento económico de una persona natural para analizar su capacidad financiera (Art. 4) | Cupo de crédito, mora, historial de pagos de un cliente persona natural |
+| `sensible` | Etnia, identidad de género o cultural, religión, ideología, filiación política, pasado judicial, condición migratoria, orientación sexual, biométricos, genéticos (Art. 4) | Huella, foto del rostro, nacionalidad o estatus migratorio |
+| `salud` | Salud física o mental (Art. 4 y Art. 25) | Diagnóstico, incapacidad médica |
+| `nna` | Datos de niñas, niños y adolescentes (Art. 25) | Hijos de un colaborador |
+| `discapacidad` | Datos de personas con discapacidad relativos a la discapacidad (Art. 25) | Porcentaje de discapacidad |
+
+Los datos de una empresa (RUC de persona jurídica, razón social) no son datos
+personales. `sensible`, `salud`, `nna` y `discapacidad` son categorías especiales:
+se avisa al usuario y se consulta con el responsable de protección de datos.
 
 ## Particularidades
 

@@ -44,7 +44,7 @@ MAX_LINEAS_FUNCION = 50
 # Columnas que legítimamente son flotantes.
 FLOTANTES_ADMITIDOS = re.compile(r"lat|lon|coord|pct|porcentaje|ratio|score|probabilidad", re.I)
 
-TIPOS_SQL = r"STRING|INT|INTEGER|BIGINT|DOUBLE|FLOAT|DECIMAL\([^)]*\)|DECIMAL|DATE|TIMESTAMP|BOOLEAN|LONG|SMALLINT|TINYINT"
+TIPOS_SQL = r"STRING|INT|INTEGER|BIGINT|DOUBLE|FLOAT|DECIMAL\([^)]*\)|DECIMAL|DATE|TIMESTAMP_NTZ|TIMESTAMP|BOOLEAN|LONG|SMALLINT|TINYINT"
 CREATE = re.compile(
     r"CREATE\s+(OR\s+REPLACE\s+)?TABLE(\s+IF\s+NOT\s+EXISTS)?\s+([`\w{}.$]+)\s*\((.*?)(?:\"\"\"|'''|;\s*$|\Z)",
     re.S | re.I | re.M)
@@ -145,14 +145,19 @@ def revisar_funciones(codigo, rel, inf):
 
 
 def revisar_ddl(codigo, rel, nombre, inf):
-    es_setup = nombre.startswith(("tbl_", "vol_", "sch_")) or "/setup/" in rel or "/00_setup/" in rel
+    es_migracion = nombre.startswith("mig_")
+    es_setup = es_migracion or nombre.startswith(("tbl_", "vol_", "sch_")) \
+        or "/setup/" in rel or "/00_setup/" in rel
+    es_slv_gld = nombre.startswith(("tbl_slv_", "tbl_gld_"))
+    creo_tabla = False
     for m in CREATE.finditer(codigo):
+        creo_tabla = True
         reemplaza, si_no_existe, tabla, cuerpo = m.group(1), m.group(2), m.group(3), m.group(4)
         corto = tabla.split(".")[-1].strip("`{}")
         if not es_setup:
             inf.error("tabla: el DDL va en un notebook de setup (tbl_)", rel, corto)
-        if reemplaza:
-            inf.error("tabla: CREATE OR REPLACE TABLE borra datos e historial", rel, corto)
+        if reemplaza and not es_migracion:
+            inf.error("tabla: CREATE OR REPLACE solo en un notebook de migración (mig_)", rel, corto)
         elif not si_no_existe:
             inf.error("tabla: usar CREATE TABLE IF NOT EXISTS", rel, corto)
         if tabla.count(".") < 2:
@@ -165,6 +170,15 @@ def revisar_ddl(codigo, rel, nombre, inf):
             inf.error("tabla: falta CLUSTER BY (AUTO o claves)", rel, corto)
         if re.search(r"autoOptimize|targetFileSize", cuerpo, re.I):
             inf.error("tabla: sin TBLPROPERTIES de optimización manual", rel, corto)
+        if re.search(r"minReaderVersion|minWriterVersion|delta\.appendOnly", cuerpo, re.I):
+            inf.error("tabla: propiedad que no se fija a mano (protocolo o appendOnly)", rel, corto)
+        if re.search(r"\bUSING\s+DELTA\b", cuerpo, re.I):
+            inf.aviso("tabla: USING DELTA sobra (es el formato por defecto)", rel, corto)
+        if es_slv_gld and not reemplaza:
+            for prop in ("delta.columnMapping.mode", "delta.enableTypeWidening"):
+                if prop not in cuerpo:
+                    inf.aviso("tabla: silver y gold llevan columnMapping y enableTypeWidening",
+                              rel, f"{corto}: falta {prop}")
         if not re.search(r"\)\s*(?:USING\s+DELTA\s*)?COMMENT\s+['\"]", cuerpo, re.I) and \
                 not re.search(r"^\s*COMMENT\s+['\"]", cuerpo, re.I | re.M):
             inf.error("tabla: falta COMMENT de tabla", rel, corto)
@@ -178,10 +192,14 @@ def revisar_ddl(codigo, rel, nombre, inf):
             inf.error("tabla: todas las columnas llevan COMMENT", rel,
                       f"{corto}: {', '.join(sin_comentario[:6])}" + ("…" if len(sin_comentario) > 6 else ""))
         for c, t, _ in columnas:
+            if c[0].isdigit():
+                inf.aviso("tabla: el nombre de columna no empieza con número", rel, f"{corto}.{c}")
             if t.upper() in ("DOUBLE", "FLOAT") and not FLOTANTES_ADMITIDOS.search(c):
                 inf.error("tabla: DECIMAL en lugar de DOUBLE/FLOAT", rel, f"{corto}.{c}")
             if c in ("fecha_carga", "fecha_actualizacion", "FECHA_INGESTA", "fecha_insercion"):
                 inf.aviso("tabla: linaje con fecha_ingesta y fecha_proceso", rel, f"{corto}.{c}")
+    if creo_tabla and es_setup and not re.search(r"\bOWNER\s+TO\b", codigo, re.I):
+        inf.aviso("tabla: falta ALTER TABLE … OWNER TO con el grupo del perfil", rel)
     if re.search(r"\bZORDER\s+BY\b", codigo, re.I):
         inf.error("tabla: ZORDER no se usa (lo reemplaza CLUSTER BY)", rel)
     if re.search(r"^\s*(spark\.sql\(\s*f?[\"']+\s*)?(OPTIMIZE|VACUUM)\s+[`\w{]", codigo, re.I | re.M):

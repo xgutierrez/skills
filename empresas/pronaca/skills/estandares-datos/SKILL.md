@@ -66,7 +66,12 @@ Un resumen para tener siempre presente. El detalle y el porqué están en las re
 - Administradas por Unity Catalog: nunca `LOCATION`.
 - `CREATE TABLE IF NOT EXISTS`, en un notebook de setup, no en la carga.
 - `CLUSTER BY`, nunca `PARTITIONED BY`. Sin propiedades de optimización manuales.
+- Silver y gold con `columnMapping` y `enableTypeWidening`, cada una con su
+  comentario `--`.
 - `COMMENT` en la tabla y en todas las columnas. `DECIMAL` para importes y medidas.
+- Dueño: el grupo del perfil. Columnas con datos personales etiquetadas.
+- El `tbl_` es la primera tarea del job. Una columna nueva es un `ALTER`, nunca una
+  recreación.
 - Hechos `fac_`, dimensiones `dim_`. Sin prefijo de capa: el catálogo ya la dice.
 - Linaje: `fecha_ingesta` (DATE) y `fecha_proceso` (TIMESTAMP).
 - `overwriteSchema` solo en setup, nunca en la carga rutinaria.

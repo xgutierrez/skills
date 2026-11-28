@@ -4,6 +4,10 @@ Cada plantilla va dentro de `spark.sql(f"""…""")` en el notebook `tbl_`, con
 `{catalogo}` y `{esquema}` resueltos a partir del parámetro `ambiente`. Sustituye
 los nombres y completa todos los comentarios.
 
+Todas siguen el estándar común de `estandares-datos/references/tablas.md`: orden
+de la DDL (§4), propiedades con su comentario en silver y gold (§7), dueño (§9) y
+etiquetas (§10 y §11). Lo propio de cada capa se irá afinando en estas plantillas.
+
 ## Contenido
 
 1. Bronze
@@ -13,7 +17,7 @@ los nombres y completa todos los comentarios.
 5. Dimensión con historia (SCD2)
 6. Tabla de control
 7. Vista de consumo
-8. Etiquetas
+8. Dueño y etiquetas
 9. Cambios de esquema
 
 ## 1. Bronze
@@ -52,6 +56,12 @@ CREATE TABLE IF NOT EXISTS {catalogo}.{esquema}.pedidos (
 )
 COMMENT 'Pedidos del ERP limpios y tipados. Grano: una fila por pedido. Fuente: bronze.erp.pedidos.'
 CLUSTER BY AUTO
+TBLPROPERTIES (
+    -- Permite renombrar o borrar columnas sin recrear la tabla
+    'delta.columnMapping.mode' = 'name',
+    -- Permite ampliar el tipo de una columna (INT a BIGINT, más decimales) sin reescribir los datos
+    'delta.enableTypeWidening' = 'true'
+)
 ```
 
 ## 3. Hecho (`fac_`)
@@ -78,6 +88,12 @@ CREATE TABLE IF NOT EXISTS {catalogo}.{esquema}.fac_ventas_cliente_mes (
 )
 COMMENT 'Ventas mensuales por cliente y canal. Grano: una fila por año, mes, cliente y canal. Fuente: silver.erp.pedidos.'
 CLUSTER BY AUTO
+TBLPROPERTIES (
+    -- Permite renombrar o borrar columnas sin recrear la tabla
+    'delta.columnMapping.mode' = 'name',
+    -- Permite ampliar el tipo de una columna (INT a BIGINT, más decimales) sin reescribir los datos
+    'delta.enableTypeWidening' = 'true'
+)
 ```
 
 Si ya se sabe que casi todas las consultas filtran por periodo:
@@ -99,6 +115,12 @@ CREATE TABLE IF NOT EXISTS {catalogo}.{esquema}.dim_cliente (
 )
 COMMENT 'Clientes con sus atributos vigentes. Grano: una fila por cliente. Fuente: silver.erp.clientes.'
 CLUSTER BY AUTO
+TBLPROPERTIES (
+    -- Permite renombrar o borrar columnas sin recrear la tabla
+    'delta.columnMapping.mode' = 'name',
+    -- Permite ampliar el tipo de una columna (INT a BIGINT, más decimales) sin reescribir los datos
+    'delta.enableTypeWidening' = 'true'
+)
 ```
 
 ## 5. Dimensión con historia (SCD2)
@@ -120,6 +142,12 @@ CREATE TABLE IF NOT EXISTS {catalogo}.{esquema}.dim_cliente (
 )
 COMMENT 'Clientes con historia de cambios. Grano: una fila por cliente y periodo de vigencia. Fuente: silver.erp.clientes.'
 CLUSTER BY (id_cliente)
+TBLPROPERTIES (
+    -- Permite renombrar o borrar columnas sin recrear la tabla
+    'delta.columnMapping.mode' = 'name',
+    -- Permite ampliar el tipo de una columna (INT a BIGINT, más decimales) sin reescribir los datos
+    'delta.enableTypeWidening' = 'true'
+)
 ```
 
 Los hechos enlazan con `id_registro_cliente` para conservar la versión vigente en
@@ -153,29 +181,55 @@ FROM {catalogo}.{esquema}.fac_ventas_cliente_mes
 GROUP BY anio, mes, codigo_canal
 ```
 
-## 8. Etiquetas
+## 8. Dueño y etiquetas
 
-Después del `CREATE`, en el mismo notebook:
+Después del `CREATE`, en celdas aparte del mismo notebook. El grupo y los valores de
+las etiquetas salen del perfil de la empresa.
 
 ```sql
-ALTER TABLE {catalogo}.{esquema}.fac_ventas_cliente_mes
-SET TAGS ('capa' = 'consumo')
+ALTER TABLE {catalogo}.{esquema}.fac_ventas_cliente_mes OWNER TO `{grupo_dueno}`
 ```
 
-Usa las etiquetas y valores del perfil de la empresa.
+```sql
+ALTER TABLE {catalogo}.{esquema}.fac_ventas_cliente_mes SET TAGS ('capa' = 'consumo')
+```
+
+Si la tabla tiene columnas con datos personales, una etiqueta por columna y otra en
+la tabla:
+
+```sql
+ALTER TABLE {catalogo}.{esquema}.dim_cliente ALTER COLUMN telefono
+SET TAGS ('dato_personal' = 'identificativo')
+```
+
+```sql
+ALTER TABLE {catalogo}.{esquema}.dim_cliente SET TAGS ('dato_personal' = 'si')
+```
 
 ## 9. Cambios de esquema
 
 Debajo del `CREATE`, en el mismo notebook `tbl_`, para que el archivo siga siendo
-la definición completa de la tabla:
+la definición completa de la tabla. El árbol de decisión está en `tablas.md` §14.
 
-```sql
-ALTER TABLE {catalogo}.{esquema}.pedidos
-ADD COLUMN codigo_vendedor STRING COMMENT 'Vendedor que registró el pedido'
+```python
+columnas = set(spark.table(tabla).columns)
+if "codigo_vendedor" not in columnas:
+    spark.sql(f"""
+        ALTER TABLE {tabla} ADD COLUMNS (
+            codigo_vendedor STRING COMMENT 'Vendedor que registró el pedido'
+        )
+    """)
+    print(f"[OK] Columna agregada: {tabla}.codigo_vendedor")
 ```
-
-Como el notebook se puede ejecutar varias veces, comprueba antes que la columna no
-exista (`spark.table(tabla).columns`) para que la segunda ejecución no falle.
 
 Actualiza también el `CREATE` con la columna nueva, para que un ambiente que se
 crea desde cero quede igual que uno migrado.
+
+Una tabla creada antes del estándar se alinea sin recrearla:
+
+```sql
+ALTER TABLE {catalogo}.{esquema}.pedidos SET TBLPROPERTIES (
+    'delta.columnMapping.mode' = 'name',
+    'delta.enableTypeWidening' = 'true'
+)
+```
